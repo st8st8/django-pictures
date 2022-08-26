@@ -21,10 +21,6 @@ def _process_picture(field_file: PictureFieldFile) -> None:
                     for width, picture in srcset.items():
                         picture.save(img)
 
-
-process_picture = _process_picture
-
-
 def construct_storage(
     storage_cls: str, storage_args: tuple, storage_kwargs: dict
 ) -> Storage:
@@ -68,7 +64,7 @@ else:
             app_name, model_name, field_name, file_name, storage_construct
         )
 
-    def process_picture(field_file: PictureFieldFile) -> None:  # noqa: F811
+    def _process_picture_dramatiq(field_file: PictureFieldFile) -> None:  # noqa: F811
         opts = field_file.instance._meta
         transaction.on_commit(
             lambda: process_picture_with_dramatiq.send(
@@ -98,7 +94,7 @@ else:
             app_name, model_name, field_name, file_name, storage_construct
         )
 
-    def process_picture(field_file: PictureFieldFile) -> None:  # noqa: F811
+    def _process_picture_celery(field_file: PictureFieldFile) -> None:  # noqa: F811
         opts = field_file.instance._meta
         transaction.on_commit(
             lambda: process_picture_with_celery.apply_async(
@@ -112,3 +108,10 @@ else:
                 queue=conf.get_settings().QUEUE_NAME,
             )
         )
+        
+if conf.get_settings().TASK_HANDLER == "dramatiq":
+    process_picture = _process_picture_dramatiq
+elif conf.get_settings().TASK_HANDLER == "celery":
+    process_picture = _process_picture_celery
+else:
+    process_picture = _process_picture

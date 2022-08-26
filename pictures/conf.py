@@ -15,6 +15,7 @@ def get_settings():
                 "l": 1200,
                 "xl": 1400,
             },
+            "TASK_HANDLER": None,
             "GRID_COLUMNS": 12,
             "CONTAINER_WIDTH": 1200,
             "FILE_TYPES": ["WEBP"],
