@@ -1,6 +1,6 @@
 import pytest
 
-from pictures.templatetags.pictures import picture
+from pictures.templatetags.pictures import img_url, picture
 from tests.testapp.models import Profile
 
 picture_html = b"""
@@ -44,7 +44,9 @@ def test_picture__placeholder(client, image_upload_file, settings):
 def test_picture__placeholder_with_alt(client, image_upload_file, settings):
     settings.PICTURES["USE_PLACEHOLDERS"] = True
     profile = Profile.objects.create(name="Spiderman", picture=image_upload_file)
-    html = picture(profile.picture, alt="Event 2022/2023", ratio="3/2", loading="lazy")
+    html = picture(
+        profile.picture, img_alt="Event 2022/2023", ratio="3/2", img_loading="lazy"
+    )
     assert "/_pictures/Event%25202022%252F2023/3x2/800w.WEBP" in html
 
 
@@ -57,7 +59,47 @@ def test_picture__invalid_ratio(image_upload_file):
 
 
 @pytest.mark.django_db
-def test_picture__additional_attrs(image_upload_file):
+def test_picture__additional_attrs_img(image_upload_file):
     profile = Profile.objects.create(name="Spiderman", picture=image_upload_file)
-    html = picture(profile.picture, ratio="3/2", loading="lazy")
+    html = picture(profile.picture, ratio="3/2", img_loading="lazy")
     assert ' loading="lazy"' in html
+
+
+@pytest.mark.django_db
+def test_picture__additional_attrs_picture(image_upload_file):
+    profile = Profile.objects.create(name="Spiderman", picture=image_upload_file)
+    html = picture(profile.picture, ratio="3/2", picture_class="picture-class")
+    assert '<picture class="picture-class"' in html
+
+
+@pytest.mark.django_db
+def test_picture__additional_attrs__type_error(image_upload_file):
+    profile = Profile.objects.create(name="Spiderman", picture=image_upload_file)
+    with pytest.raises(TypeError) as e:
+        picture(profile.picture, ratio="3/2", does_not_exist="error")
+    assert "Invalid keyword argument: does_not_exist" in str(e.value)
+
+
+@pytest.mark.django_db
+def test_img_url(image_upload_file):
+    profile = Profile.objects.create(name="Spiderman", picture=image_upload_file)
+    assert (
+        img_url(profile.picture, ratio="3/2", file_type="webp", width="800")
+        == "/_pictures/image/3x2/800w.WEBP"
+    )
+
+
+@pytest.mark.django_db
+def test_img_url__raise_wrong_ratio(image_upload_file):
+    profile = Profile.objects.create(name="Spiderman", picture=image_upload_file)
+    with pytest.raises(ValueError) as e:
+        img_url(profile.picture, ratio="2/3", file_type="webp", width=800)
+    assert "Invalid ratio: 2/3. Choices are: 1/1, 3/2, 16/9" in str(e.value)
+
+
+@pytest.mark.django_db
+def test_img_url__raise_wrong_file_type(image_upload_file):
+    profile = Profile.objects.create(name="Spiderman", picture=image_upload_file)
+    with pytest.raises(ValueError) as e:
+        img_url(profile.picture, ratio="3/2", file_type="gif", width=800)
+    assert "Invalid file type: gif. Choices are: WEBP" in str(e.value)

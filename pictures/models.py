@@ -11,9 +11,11 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import Storage
 from django.db.models import ImageField
 from django.db.models.fields.files import ImageFieldFile
+from django.urls import reverse
 from PIL import Image, ImageOps
 
 __all__ = ["PictureField", "PictureFieldFile"]
+
 
 from pictures import conf, utils
 
@@ -33,10 +35,22 @@ class SimplePicture:
 
     @property
     def url(self) -> str:
+        if conf.get_settings().USE_PLACEHOLDERS:
+            return reverse(
+                "pictures:placeholder",
+                kwargs={
+                    "alt": Path(self.parent_name).stem,
+                    "width": self.width,
+                    "ratio": f"{self.aspect_ratio.numerator}x{self.aspect_ratio.denominator}"
+                    if self.aspect_ratio
+                    else None,
+                    "file_type": self.file_type,
+                },
+            )
         return self.storage.url(self.name)
 
     @property
-    def height(self) -> int or None:
+    def height(self) -> int | None:
         if self.aspect_ratio:
             return math.floor(self.width / self.aspect_ratio)
 
@@ -52,13 +66,13 @@ class SimplePicture:
         return Path(self.storage.path(self.name))
 
     def process(self, image) -> Image:
+        image = ImageOps.exif_transpose(image)  # crates a copy
         height = self.height or self.width / Fraction(*image.size)
         size = math.floor(self.width), math.floor(height)
 
         if self.aspect_ratio:
             image = ImageOps.fit(image, size)
         else:
-            image = image.copy()
             image.thumbnail(size)
         return image
 
@@ -220,7 +234,7 @@ class PictureField(ImageField):
                     "width_field and height_field attributes are missing",
                     obj=self,
                     id="fields.E101",
-                    hint="Set both the width_field and height_field attribute to avoid storage IO",
+                    hint="Please add two positive integer fields to '{self.model._meta.app_label}.{self.model.__name__}' and add their field names as the 'width_field' and 'height_field' attribute for your picture field. Otherwise Django will not be able to cache the image aspect size causing disk IO and potential response time increases.",
                 )
             ]
         return []

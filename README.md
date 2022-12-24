@@ -1,4 +1,6 @@
-# django-pictures
+![Django Pictures Logo](https://repository-images.githubusercontent.com/455480246/daaa7870-d28c-4fce-8296-d3e3af487a64)
+
+# Django Pictures
 
 Responsive cross-browser image library using modern codes like AVIF & WebP.
 
@@ -7,20 +9,20 @@ Responsive cross-browser image library using modern codes like AVIF & WebP.
 * serve files with or without a CDN
 * placeholders for local development
 * migration support
-* async image processing for Celery or Dramatiq
+* async image processing for [Celery] or [Dramatiq]
+* [DRF] support
 
 [![PyPi Version](https://img.shields.io/pypi/v/django-pictures.svg)](https://pypi.python.org/pypi/django-pictures/)
 [![Test Coverage](https://codecov.io/gh/codingjoe/django-pictures/branch/main/graph/badge.svg)](https://codecov.io/gh/codingjoe/django-pictures)
 [![GitHub License](https://img.shields.io/github/license/codingjoe/django-pictures)](https://raw.githubusercontent.com/codingjoe/django-pictures/master/LICENSE)
 
-### Usage
+## Usage
 
 Before you start, it can be a good idea to understand the fundamentals of
 [responsive images](https://developer.mozilla.org/en-US/docs/Learn/HTML/Multimedia_and_embedding/Responsive_images).
 
 Once you get a feeling how complicated things can get with all device types, you'll probably find
 a new appreciation for this package and are ready to adopt in you project :)
-
 
 ```python
 # models.py
@@ -35,7 +37,7 @@ class Profile(models.Model):
 ```html
 <!-- template.html -->
 {% load pictures %}
-{% picture profile.picture alt="Spiderman" loading="lazy" m=6 l=4 %}
+{% picture profile.picture img_alt="Spiderman" img_loading="lazy" m=6 l=4 %}
 ```
 
 The template above will render into:
@@ -48,11 +50,15 @@ The template above will render into:
 </picture>
 ```
 
-### Setup
+## Setup
+
+### Installation
 
 ```shell
 python3 -m pip install django-pictures
 ```
+
+### Settings
 
 ```python
 # settings.py
@@ -80,7 +86,7 @@ PICTURES = {
 If you have either Dramatiq or Celery installed, we will default to async
 image processing. You will need workers to listen to the `pictures` queue.
 
-#### Placeholders
+### Placeholders
 
 This library comes with dynamically created placeholders to simplify local
 development. To enable them, add the following to enable the
@@ -101,9 +107,28 @@ if get_settings().USE_PLACEHOLDERS:
     ]
 ```
 
-### Config
+### Legacy use-cases (email)
 
-#### Aspect ratios
+Although the `picture`-tag is [adequate for most use-cases][caniuse-picture],
+some remain, where a single `img` tag is necessary. Notably in email, where
+[most clients do support WebP][caniemail-webp] but not [srcset][caniemail-srcset].
+The template tag `img_url` returns a single size image URL.
+In addition to the ratio you will need to define the `file_type`
+as well as the `width` (absolute width in pixels).
+
+
+```html
+{% load pictures %}
+<img src="{% img_url profile.picture ratio="3/2" file_type="webp" width=800 %}" alt="profile picture">
+```
+
+[caniuse-picture]: https://caniuse.com/picture
+[caniemail-webp]: https://www.caniemail.com/features/image-webp/
+[caniemail-srcset]: https://www.caniemail.com/features/html-srcset/
+
+## Config
+
+### Aspect ratios
 
 You can specify the aspect ratios of your images. Images will be cropped to the
 specified aspect ratio. Aspect ratios are specified as a string with a slash
@@ -126,7 +151,7 @@ class Profile(models.Model):
 ```html
 # template.html
 {% load pictures %}
-{% picture profile.picture alt="Spiderman" ratio="16/9" m=6 l=4 %}
+{% picture profile.picture img_alt="Spiderman" ratio="16/9" m=6 l=4 %}
 ```
 
 If you don't specify an aspect ratio or None in your template, the image will be
@@ -135,18 +160,18 @@ served with the original aspect ratio of the file.
 You may only use aspect ratios in templates, that have been defined on the model.
 The model `aspect_ratios` will default to `[None]`, if other value is provided.
 
-#### Breakpoints
+### Breakpoints
 
 You may define your own breakpoints, they should be identical to the ones used
 in your css library. Simply override the `PICTURES["BREAKPOINTS"]` setting.
 
-#### Grid columns
+### Grid columns
 
 Grids are so common in web design, that they even made it into CSS.
 We default to 12 columns, but you can override this setting, via the
 `PICTURES["GRID_COLUMNS"]` setting.
 
-#### Container width
+### Container width
 
 Containers are commonly used to limit the maximum width of layouts,
 to promote better readability on larger screens. We default to `1200px`,
@@ -154,7 +179,7 @@ but you can override this setting, via the `PICTURES["CONTAINER_WIDTH"]` setting
 
 You may also set it to `None`, should you not use a container.
 
-#### File types
+### File types
 
 Unless you still services IE11 clients, you should be fine serving just
 [WebP](https://caniuse.com/webp). Sadly, [AVIF](https://caniuse.com/avif)
@@ -164,20 +189,19 @@ Unless you still services IE11 clients, you should be fine serving just
 If you are serving IE11 use add `JPEG` to the list. Beware though, that this may
 drastically increase you storage needs.
 
-#### Pixel densities
+### Pixel densities
 
 Unless you really care that your images hold of if you hold your UHD phone very
 close to your eyeballs, you should be fine, serving at the default `1x` and `2x`
 densities.
 
-
-#### Async image processing
+### Async image processing
 
 If you have either Dramatiq or Celery installed, we will default to async
 image processing. You will need workers to listen to the `pictures` queue.
 You can override the queue name, via the `PICTURES["QUEUE_NAME"]` setting.
 
-### Migrations
+## Migrations
 
 Django doesn't support file field migrations, but we do.
 You can simply auto create the migration and replace Django's
@@ -187,10 +211,9 @@ You can follow [the example][migration] in our test app, to see how it works.
 
 [migration]: tests/testapp/migrations/0002_alter_profile_picture.py
 
-
 ## Contrib
 
-### Django Rest Framework (DRF)
+### Django Rest Framework ([DRF])
 
 We do ship with a read-only `PictureField` that can be used to include all
 available picture sizes in a DRF serializer.
@@ -203,7 +226,44 @@ class PictureSerializer(serializers.Serializer):
     picture = PictureField()
 ```
 
+You may provide optional GET parameters to the serializer, to specify the aspect
+ratio and breakpoints you want to include in the response. The parameters are
+prefixed with the `fieldname_` to avoid conflicts with other fields.
+
+```bash
+curl http://localhost:8000/api/path/?picture_ratio=16%2F9&picture_m=6&picture_l=4
+# %2F is the url encoded slash
+```
+
+```json
+{
+  "other_fields": "…",
+  "picture": {
+    "url": "/path/to/image.jpg",
+    "width": 800,
+    "height": 800,
+    "ratios": {
+      "1/1": {
+        "sources": {
+          "image/webp": {
+            "100": "/path/to/image/1/100w.webp",
+            "200": "…"
+          }
+        },
+        "media": "(min-width: 0px) and (max-width: 991px) 100vw, (min-width: 992px) and (max-width: 1199px) 33vw, 25vw"
+      }
+    }
+  }
+}
+```
+
+Note that the `media` keys are only included, if you have specified breakpoints.
+
 ### Django Cleanup
 
 `PictureField` is compatible with [Django Cleanup](https://github.com/un1t/django-cleanup),
 which automatically deletes its file and corresponding `SimplePicture` files.
+
+[drf]: https://www.django-rest-framework.org/
+[celery]: https://docs.celeryproject.org/en/stable/
+[dramatiq]: https://dramatiq.io/
