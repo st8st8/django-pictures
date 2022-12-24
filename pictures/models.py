@@ -122,7 +122,10 @@ class PictureFieldFile(ImageFieldFile):
             and hasattr(self.instance, self.field.width_field)
         ):
             # get width from width field, to avoid loading image
-            return getattr(self.instance, self.field.width_field)
+            ret = getattr(self.instance, self.field.width_field)
+            # Causes TypeError when width_field is Null
+            if ret is not None:
+                return ret
         return self._get_image_dimensions()[0]
 
     @property
@@ -134,7 +137,11 @@ class PictureFieldFile(ImageFieldFile):
             and hasattr(self.instance, self.field.height_field)
         ):
             # get height from height field, to avoid loading image
-            return getattr(self.instance, self.field.height_field)
+            ret = getattr(self.instance, self.field.height_field)
+
+            # Causes TypeError when height_field is Null
+            if ret is not None:
+                return ret
         return self._get_image_dimensions()[1]
 
     @property
